@@ -11,17 +11,89 @@ services:
       - ../.env
     volumes:
       - ..:/app
-      - static_volume_prod:/app/staticfiles
-      - media_volume_prod:/app/media
+      - static_volume_dev:/app/staticfiles
+      - media_volume_dev:/app/media
+    depends_on:
+      - stunning_dollop_db
+      - redis
     networks:
-      - stunning_dollop_network
+      - stunning_dollop_dev_network
+
+  stunning_dollop_db:
+    image: postgres:16-alpine
+    container_name: stunning_dollop_db_dev
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    env_file:
+      - ../.env
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - stunning_dollop_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: app_redis_dev
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    env_file:
+      - ../.env
+    command: redis-server --requirepass $REDIS_PASSWORD --appendonly yes
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - stunning_dollop_dev_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus_dev
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - stunning_dollop_dev_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_dev
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../.env
+    volumes:
+      - grafana_data_dev:/var/lib/grafana
+    networks:
+      - stunning_dollop_dev_network
+    depends_on:
+      - prometheus
 
 volumes:
-  static_volume_prod:
-  media_volume_prod:
+  postgres_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+  static_volume_dev:
+    driver: local
+  media_volume_dev:
+    driver: local
+  grafana_data_dev:
+    driver: local
 
 networks:
-  stunning_dollop_network:
+  stunning_dollop_dev_network:
     driver: bridge
     ipam:
       config:

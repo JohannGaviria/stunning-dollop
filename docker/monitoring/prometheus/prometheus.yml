@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'stunning_dollop'
+    static_configs:
+      - targets: ['stunning_dollop_backend_prod:8000']
