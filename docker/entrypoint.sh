@@ -8,12 +8,12 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo ${GREEN} "Starting application in $ENVIRONMENT mode..." ${NC}
-echo ${GREEN} "Host: $BACKEND_HOST, Port: $BACKEND_PORT" ${NC}
+echo ${GREEN} "Host: 0.0.0.0, Port: $BACKEND_PORT" ${NC}
 
 if [ "$ENVIRONMENT" = "development" ]; then
     echo ${GREEN} "Development mode with auto-reload enabled" ${NC}
-    exec uvicorn app.main:app --host $BACKEND_HOST --port $BACKEND_PORT --reload
+    exec uvicorn app.main:app --host 0.0.0.0 --port $BACKEND_PORT --reload
 else
-    echo ${GREEN} "Production/Staging mode with $BACKEND_WORKERS workers" ${NC}
-    exec uvicorn app.main:app --host $BACKEND_HOST --port $BACKEND_PORT --workers $BACKEND_WORKERS
+    echo ${GREEN} "Production mode with $BACKEND_WORKERS workers" ${NC}
+    exec uvicorn app.main:app --host 0.0.0.0 --port $BACKEND_PORT --workers $BACKEND_WORKERS
 fi
