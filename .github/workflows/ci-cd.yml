@@ -33,7 +33,7 @@ jobs:
       - name: Build Docker image
         run: |
           SHORT_SHA=${GITHUB_SHA:0:8}
-          docker build -f docker/Dockerfile -t $IMAGE_NAME:$SHORT_SHA .
+          docker build -f docker/Dockerfile --target production -t $IMAGE_NAME:$SHORT_SHA .
 
   push-to-dockerhub:
     needs: build-and-test
@@ -51,7 +51,7 @@ jobs:
         run: |
           SHORT_SHA=${GITHUB_SHA:0:8}
 
-          docker build -f docker/Dockerfile -t $IMAGE_NAME:$SHORT_SHA .
+          docker build -f docker/Dockerfile --target production -t $IMAGE_NAME:$SHORT_SHA .
           docker push $IMAGE_NAME:$SHORT_SHA
 
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
