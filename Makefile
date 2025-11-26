@@ -23,10 +23,10 @@ setup: ## Install development dependencies and git hooks
 	pre-commit install
 
 up: ## Start docker containers with build
-	docker compose -f docker/docker-compose.dev.yml up --build
+	docker compose --env-file .env -f docker/docker-compose.dev.yml up --build
 
 down: ## Stop docker containers
-	docker compose -f docker/docker-compose.dev.yml down
+	docker compose --env-file .env -f docker/docker-compose.dev.yml down
 
 test: ## Run tests with pytest
 	@echo "$(BLUE)Running tests...$(NC)"
@@ -35,6 +35,8 @@ test: ## Run tests with pytest
 format: ## Format code (Ruff formatter)
 	@echo "$(BLUE)Formatting code...$(NC)"
 	ruff format .
+	@echo "$(BLUE)Fixing auto-fixable lint issues...$(NC)"
+	ruff check --fix .
 
 lint: ## Lint code with Ruff and type-check with mypy
 	@echo "$(BLUE)Running Ruff lint...$(NC)"
