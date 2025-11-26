@@ -1,0 +1,28 @@
+services:
+  stunning_dollop_backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: stunning_dollop_backend_dev
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    env_file:
+      - ../.env
+    volumes:
+      - ..:/app
+      - static_volume_prod:/app/staticfiles
+      - media_volume_prod:/app/media
+    networks:
+      - stunning_dollop_network
+
+volumes:
+  static_volume_prod:
+  media_volume_prod:
+
+networks:
+  stunning_dollop_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

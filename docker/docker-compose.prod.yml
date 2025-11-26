@@ -1,0 +1,105 @@
+services:
+  stunning_dollop_backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    container_name: stunning_dollop_backend_prod
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    env_file:
+      - ../.env
+    volumes:
+      - static_volume_prod:/app/staticfiles
+      - media_volume_prod:/app/media
+    networks:
+      - stunning_dollop_network
+      - backend
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`${BACKEND_HOST}`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls=true"
+      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+      - "traefik.http.services.app.loadbalancer.server.port=${BACKEND_PORT}"
+      - "traefik.docker.network=web"
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      # Dashboard
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${BACKEND_HOST}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      # Middleware to auth
+      - "traefik.http.routers.traefik.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_AUTH}"
+      # Redirect HTTP to HTTPS
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: app_nginx_prod
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro
+      - static_volume_prod:/app/staticfiles:ro
+      - media_volume_prod:/app/media:ro
+    networks:
+      - web
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=Host(`${BACKEND_HOST}`) && PathPrefix(`/static`, `/media`)"
+      - "traefik.http.routers.nginx.entrypoints=websecure"
+      - "traefik.http.routers.nginx.tls=true"
+      - "traefik.http.routers.nginx.tls.certresolver=letsencrypt"
+      - "traefik.http.services.nginx.loadbalancer.server.port=80"
+      - "traefik.docker.network=web"
+    restart: unless-stopped
+
+volumes:
+  static_volume_prod:
+    driver: local
+  media_volume_prod:
+    driver: local
+  traefik_letsencrypt:
+    driver: local
+
+networks:
+  stunning_dollop_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  web:
+    driver: bridge
+  backend:
+    driver: bridge
